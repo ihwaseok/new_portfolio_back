@@ -1,0 +1,42 @@
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+
+const filePath = fileURLToPath(import.meta.url);
+const dirPath = path.dirname(filePath);
+
+// Swagger 문서 공통설정
+const options = {
+    definition: {
+        openapi: '3.1.1',
+        info: {
+            title: process.env.SWAGGER_TITLE,
+            version: process.env.SWAGGER_VERSION,
+        },
+        servers: [{ url: `http://${process.env.SERVER_HOST}:${process.env.SERVER_PORT}${process.env.API_PREFIX}` }],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT'
+                },
+                apiKeyAuth: {
+                    type: 'apiKey',
+                    in: 'header',
+                    name: 'x-auth-key'
+                }
+            }
+        },
+        security: [{ bearerAuth: [] }, { apiKeyAuth: [] }]
+    },
+    apis: [path.resolve(dirPath, '../api/route/*.js')],
+};
+
+const swaggerSpec = swaggerJsdoc(options);
+
+export default async (app) => {
+    app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+};
