@@ -38,5 +38,5 @@ const options = {
 const swaggerSpec = swaggerJsdoc(options);
 
 export default async (app) => {
-    app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 };
