@@ -15,7 +15,8 @@ const options = {
             title: process.env.SWAGGER_TITLE,
             version: process.env.SWAGGER_VERSION,
         },
-        servers: [{ url: `http://${process.env.SERVER_HOST}:${process.env.SERVER_PORT}${process.env.API_PREFIX}` }],
+        // Swagger를 연 주소의 프로토콜/호스트를 사용합니다 (HTTPS 프록시 지원).
+        servers: [{ url: process.env.API_PREFIX || '/' }],
         components: {
             securitySchemes: {
                 bearerAuth: {

@@ -111,17 +111,27 @@ export default (app) => {
      * /sample/joplinSync:
      *   get:
      *     summary: Joplin 폴더 탐색 후 DB 동기화
-     *     description: JOPLIN_DIR 경로의 폴더를 재귀 탐색하여 admin_menu 테이블에 저장합니다. md 파일 내 리소스 경로도 함께 수정됩니다.
+     *     description: 메뉴, Markdown 원문, 문서 조각 및 임베딩 벡터를 동기화합니다. 임베딩 실패 시 기존 DB 데이터는 유지됩니다. 사전에 sql/001_joplin_rag.sql 및 임베딩 API 환경변수를 설정해야 합니다.
      *     tags: [Sample]
      *     security:
      *       - apiKeyAuth: []
      *     responses:
      *       200:
      *         description: 동기화 완료 및 삽입 건수 반환
+     *       409:
+     *         description: 동기화가 이미 실행 중
+     *       500:
+     *         description: 파일, 임베딩 API 또는 DB 처리 실패
      */
     route.get('/joplinSync', verifyApiKey, async (req, res) => {
-        const count = await SampleService.joplinSync();
-
-        return res.status(200).json({ message: 'Joplin Sync 완료', count });
+        try {
+            const count = await SampleService.joplinSync();
+            return res.status(200).json({ message: 'Joplin Sync 완료', count });
+        } catch (error) {
+            global.Logger.error(`[Joplin Sync] ${error.message}`);
+            return res.status(error.status || 500).json({
+                message: error.status === 409 ? error.message : 'Joplin Sync 실패. 서버 로그와 임베딩 API/DB 설정을 확인하세요.'
+            });
+        }
     });
 };

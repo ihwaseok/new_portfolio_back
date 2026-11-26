@@ -4,7 +4,8 @@ import dotenv from 'dotenv';
 const app = express();
 
 // 환경변수 가져오기
-const env = dotenv.config({ path: './.env.dev' });
+const envFile = process.env.ENV_FILE || (process.env.NODE_ENV === 'production' ? './.env.prod' : './.env.dev');
+const env = dotenv.config({ path: envFile });
 if(env.error) {
     throw new Error("Fail to Load Enviroment. Couldn't find .env file");
 }
@@ -15,5 +16,5 @@ await startup(app);
 
 app.listen(process.env.SERVER_PORT, () => {
     global.Logger.info(`Server is running on http://${process.env.SERVER_HOST}:${process.env.SERVER_PORT}`);
-    global.Logger.info(`Swagger is running on http://${process.env.SERVER_HOST}:${process.env.SERVER_PORT}/docs`);
+    global.Logger.info(`Swagger is running on http://${process.env.SERVER_HOST}:${process.env.SERVER_PORT}/api/docs`);
 });
