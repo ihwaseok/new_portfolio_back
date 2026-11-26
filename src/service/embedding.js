@@ -37,7 +37,9 @@ export async function embedText(text, config, fetchImpl = fetch) {
                 input: config.prefix + text,
                 encoding_format: 'float',
             }),
-            signal: AbortSignal.timeout(config.timeout),
+            signal: config.signal
+                ? AbortSignal.any([config.signal, AbortSignal.timeout(config.timeout)])
+                : AbortSignal.timeout(config.timeout),
         });
     } catch (error) {
         const causes = error.cause?.errors || [error.cause || error];

@@ -2,9 +2,10 @@ import { embedText, embeddingConfig } from './embedding.js';
 import { rankDocuments, publicSources, buildMessages } from './ragSearch.js';
 import { assessEvidence, evidenceMessages, parseEvidence } from './ragEvidence.js';
 import { resolveIntent, generalMessages } from './chatIntent.js';
+import { readEvents, visibleAnswer } from './eventStream.js';
 
 // 인증과 시간 제한을 적용하여 대화 모델을 호출하고 답변 텍스트를 추출합니다.
-export async function generateAnswer(messages, env = process.env, fetchImpl = fetch) {
+export async function generateAnswer(messages, env = process.env, fetchImpl = fetch, options = {}) {
     const url = new URL(env.CHAT_API_URL || 'http://127.0.0.1:18081/v1/chat/completions');
     if (!['http:', 'https:'].includes(url.protocol))
         throw new Error('CHAT_API_URL은 HTTP(S) 주소여야 합니다.');
@@ -20,11 +21,39 @@ export async function generateAnswer(messages, env = process.env, fetchImpl = fe
             messages,
             max_tokens: 256,
             temperature: 0.2,
-            stream: false,
+            stream: Boolean(options.onText),
         }),
-        signal: AbortSignal.timeout(timeout),
+        signal: options.signal
+            ? AbortSignal.any([options.signal, AbortSignal.timeout(timeout)])
+            : AbortSignal.timeout(timeout),
     });
     if (!response.ok) throw new Error(`답변 API HTTP ${response.status}`);
+    if (options.onText) {
+        let text = '';
+        let previous = '';
+        let finished = false;
+        for await (const data of readEvents(response.body)) {
+            options.signal?.throwIfAborted();
+            if (data === '[DONE]') {
+                finished = true;
+                break;
+            }
+            const chunk = JSON.parse(data);
+            if (chunk.error) throw new Error('모델 스트리밍 오류');
+            const delta = chunk.choices?.[0]?.delta?.content;
+            if (typeof delta === 'string') text += delta;
+            if (text.length > 100000) throw new Error('모델 응답이 너무 깁니다.');
+            const visible = visibleAnswer(text);
+            if (visible !== previous) {
+                options.onText(visible);
+                previous = visible;
+            }
+        }
+        if (!finished) throw new Error('모델 스트림이 완료 전에 종료됐습니다.');
+        const answer = visibleAnswer(text, true);
+        if (!answer) throw new Error('모델 답변이 비어 있습니다.');
+        return answer;
+    }
     const result = await response.json();
     const content = result.choices?.[0]?.message?.content;
     if (typeof content !== 'string' || !content.trim())
@@ -40,17 +69,23 @@ export function createChatService({
     index,
     embed = embedText,
     answer = generateAnswer,
-    verify = (question, sources, env) => generateAnswer(evidenceMessages(question, sources), env),
+    verify = (question, sources, env, options) =>
+        generateAnswer(evidenceMessages(question, sources), env, fetch, {
+            signal: options?.signal,
+        }),
     env = process.env,
     logger = () => global.Logger,
 } = {}) {
     // 문서 검색·근거 검증·답변 생성을 순서대로 수행하며 단계별 장애를 처리합니다.
-    const documentChat = async ({ question, history = [] }, searchOnly = false) => {
+    const documentChat = async ({ question, history = [] }, searchOnly = false, options = {}) => {
+        options.onStatus?.('문서를 검색하고 있습니다…');
         const model = env.EMBEDDING_MODEL || 'intfloat/multilingual-e5-small';
         let rows;
         try {
             rows = await index(model);
+            options.signal?.throwIfAborted();
         } catch (error) {
+            options.signal?.throwIfAborted();
             logger()?.error(`[Chat] 문서 인덱스 조회 실패: ${error.code || error.name}`);
             throw Object.assign(
                 new Error('검색 데이터를 읽을 수 없습니다. RAG 테이블과 sync 상태를 확인하세요.'),
@@ -77,12 +112,14 @@ export function createChatService({
             // E5는 문서에 passage:, 질문에 query: 접두어를 구분하여 사용합니다.
             vector = await embed(question, {
                 ...config,
+                signal: options.signal,
                 prefix:
                     model === 'intfloat/multilingual-e5-small'
                         ? 'query: '
                         : env.EMBEDDING_QUERY_PREFIX || '',
             });
         } catch (error) {
+            options.signal?.throwIfAborted();
             mode = 'keyword';
             logger()?.warning?.(`[Chat] 질문 임베딩 실패, 키워드 검색 사용: ${error.name}`);
         }
@@ -99,9 +136,10 @@ export function createChatService({
         // 검색 전용 요청은 답변 모델을 호출하지 않고 검색 단계의 근거 정보만 반환합니다.
         if (searchOnly) return { sources, mode, evidence };
         if (candidates.length) {
+            options.onStatus?.('문서의 답변 근거를 확인하고 있습니다…');
             try {
                 const checked = parseEvidence(
-                    await verify(question, candidates, env),
+                    await verify(question, candidates, env, options),
                     candidates,
                     question,
                 );
@@ -120,6 +158,7 @@ export function createChatService({
                     sources = publicSources(matches);
                 }
             } catch (error) {
+                options.signal?.throwIfAborted();
                 evidence.verification = 'unavailable';
                 evidence.reason = '관련 문서는 찾았지만 답변 근거 확인을 완료하지 못했습니다.';
                 logger()?.warning?.(`[Chat] 근거 확인 실패: ${error.name}`);
@@ -137,7 +176,13 @@ export function createChatService({
         // 답변 생성이 실패해도 확인된 출처 페이지는 사용자에게 안내합니다.
         const fallback = `다음 페이지에서 관련 내용을 확인할 수 있습니다.\n${sources.map((source, i) => `${i + 1}. ${source.title}`).join('\n')}`;
         try {
-            const generated = await answer(buildMessages(question, history, matches), env);
+            options.onStatus?.('답변을 작성하고 있습니다…');
+            const generated = await answer(
+                buildMessages(question, history, matches),
+                env,
+                undefined,
+                options,
+            );
             if (
                 typeof generated !== 'string' ||
                 !generated.includes(matches[0].title) ||
@@ -147,25 +192,32 @@ export function createChatService({
             }
             return { answer: generated, sources, mode, evidence };
         } catch (error) {
+            options.signal?.throwIfAborted();
             logger()?.warning?.(`[Chat] 답변 생성 실패, 검색 결과 반환: ${error.name}`);
             return { answer: fallback, sources, mode, evidence, generationUnavailable: true };
         }
     };
     // 검색 전용 요청은 문서 모드로 고정하고 일반 질문은 DB·임베딩 조회를 건너뜁니다.
-    return async (input, searchOnly = false) => {
+    return async (input, searchOnly = false, options = {}) => {
+        options.signal?.throwIfAborted();
         const intent = searchOnly
             ? 'document'
             : resolveIntent(input.question, input.mode, input.history || []);
+        options.onMeta?.({ intent });
         if (intent === 'general') {
             try {
+                options.onStatus?.('답변을 작성하고 있습니다…');
                 const generated = await answer(
                     generalMessages(input.question, input.history || []),
                     env,
+                    undefined,
+                    options,
                 );
                 if (typeof generated !== 'string' || !generated.trim())
                     throw new Error('빈 일반 답변');
                 return { answer: generated, sources: [], mode: 'general', intent: 'general' };
             } catch (error) {
+                options.signal?.throwIfAborted();
                 logger()?.warning?.(`[Chat] 일반 답변 생성 실패: ${error.name}`);
                 throw Object.assign(
                     new Error('일반 답변을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.'),
@@ -173,6 +225,6 @@ export function createChatService({
                 );
             }
         }
-        return { ...(await documentChat(input, searchOnly)), intent: 'document' };
+        return { ...(await documentChat(input, searchOnly, options)), intent: 'document' };
     };
 }
