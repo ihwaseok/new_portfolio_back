@@ -2,7 +2,8 @@ import conn from '../../startup/mariadb.js';
 import { syncJoplin } from '../joplinSync.js';
 
 const serviceObj = {
-    selectMenuList: async function() {
+    // Joplin 폴더 목록에 하위 폴더 여부와 직접 포함된 문서 수를 함께 조회합니다.
+    selectMenuList: async function () {
         const query = `
             SELECT A.MENU_ID, A.MENU_NM, A.PARENT_ID, A.PATH, A.SORT_NO
                     , IF(COUNT(B.MENU_ID) = 0, 'N', 'Y') AS IS_DIR
@@ -23,7 +24,7 @@ const serviceObj = {
 
         return new Promise((resolve, reject) => {
             conn.query(query, (err, rows) => {
-                if(err) {
+                if (err) {
                     return reject(err);
                 }
 
@@ -34,9 +35,11 @@ const serviceObj = {
         });
     },
 
+    // 문서와 임베딩 동기화는 별도 서비스에 위임합니다.
     joplinSync: syncJoplin,
 
-    selectMenuByParent: async function(id) {
+    // 지정한 부모 메뉴에 속한 문서를 정렬 순서로 조회합니다.
+    selectMenuByParent: async function (id) {
         const query = `
             SELECT A.MENU_ID, A.MENU_NM, A.PARENT_ID, A.PATH, A.SORT_NO, A.IS_DIR
             FROM admin_menu A
@@ -47,7 +50,7 @@ const serviceObj = {
 
         return new Promise((resolve, reject) => {
             conn.query(query, [id], (err, rows) => {
-                if(err) {
+                if (err) {
                     return reject(err);
                 }
 
@@ -56,7 +59,7 @@ const serviceObj = {
                 return resolve(rows);
             });
         });
-    }
+    },
 };
 
 export default serviceObj;

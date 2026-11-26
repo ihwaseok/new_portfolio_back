@@ -3,7 +3,6 @@ import swaggerUi from 'swagger-ui-express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-
 const filePath = fileURLToPath(import.meta.url);
 const dirPath = path.dirname(filePath);
 
@@ -22,16 +21,16 @@ const options = {
                 bearerAuth: {
                     type: 'http',
                     scheme: 'bearer',
-                    bearerFormat: 'JWT'
+                    bearerFormat: 'JWT',
                 },
                 apiKeyAuth: {
                     type: 'apiKey',
                     in: 'header',
-                    name: 'x-auth-key'
-                }
-            }
+                    name: 'x-auth-key',
+                },
+            },
         },
-        security: [{ bearerAuth: [] }, { apiKeyAuth: [] }]
+        security: [{ bearerAuth: [] }, { apiKeyAuth: [] }],
     },
     apis: [path.resolve(dirPath, '../api/route/*.js')],
 };

@@ -75,6 +75,7 @@ export default (app) => {
      *       500:
      *         description: DB 수정 실패
      */
+    // API 키와 수정값을 검증한 뒤 기존 공통코드를 갱신합니다.
     route.patch('/:group/:code', verifyApiKey, validateCommonCodeUpdate, async (req, res) => {
         const { group, code } = req.params;
         const { CODE_VALUE } = req.body;
@@ -127,6 +128,7 @@ export default (app) => {
      *       500:
      *         description: DB 조회 실패
      */
+    // API 키를 확인하고 사용 중인 공통코드 목록을 반환합니다.
     route.get('/:group', verifyApiKey, async (req, res) => {
         const data = await CommonCodeService.selectByGroup(req.params.group);
         res.set('Cache-Control', 'no-store');

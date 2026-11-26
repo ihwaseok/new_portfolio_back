@@ -3,7 +3,7 @@ import verifyApiKey from '../middleware/verifyApiKey.js';
 import chat from '../../service/chatService.js';
 import { validateChat } from '../../service/ragSearch.js';
 
-export default app => {
+export default (app) => {
     const route = Router();
     app.use('/chat', route);
     /**
@@ -84,18 +84,32 @@ export default app => {
      *                 type: string
      *                 maxLength: 500
      */
+    // 프로세스 안에서 검색과 대화 요청의 동시 실행 수를 함께 제한합니다.
     let active = 0;
-    for (const path of ['/messages', '/search']) route.post(path, verifyApiKey, async (req, res) => {
-        let input;
-        try { input = validateChat(req.body); } catch (error) { return res.status(400).json({ message: error.message }); }
-        if (active >= 2) return res.status(429).json({ message: '다른 질문을 처리 중입니다. 잠시 후 다시 시도해 주세요.' });
-        active++;
-        try {
-            res.set('Cache-Control', 'no-store');
-            return res.json(await chat(input, path === '/search'));
-        } catch (error) {
-            global.Logger?.error(`[Chat] 요청 실패: ${error.code || error.name}`);
-            return res.status(error.status || 500).json({ message: error.status === 503 ? error.message : '챗봇 처리 중 오류가 발생했습니다.' });
-        } finally { active--; }
-    });
+    for (const path of ['/messages', '/search'])
+        route.post(path, verifyApiKey, async (req, res) => {
+            let input;
+            try {
+                input = validateChat(req.body);
+            } catch (error) {
+                return res.status(400).json({ message: error.message });
+            }
+            if (active >= 2)
+                return res
+                    .status(429)
+                    .json({ message: '다른 질문을 처리 중입니다. 잠시 후 다시 시도해 주세요.' });
+            active++;
+            try {
+                res.set('Cache-Control', 'no-store');
+                return res.json(await chat(input, path === '/search'));
+            } catch (error) {
+                global.Logger?.error(`[Chat] 요청 실패: ${error.code || error.name}`);
+                return res.status(error.status || 500).json({
+                    message:
+                        error.status === 503 ? error.message : '챗봇 처리 중 오류가 발생했습니다.',
+                });
+            } finally {
+                active--;
+            }
+        });
 };

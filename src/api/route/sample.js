@@ -4,13 +4,11 @@ import verifyApiKey from '../middleware/verifyApiKey.js';
 import AuthService from '../../service/auth.js';
 import SampleService from '../../service/sql/sample.js';
 
-
 const route = Router();
 
 export default (app) => {
     // 모듈별 접두사 설정
     app.use('/sample', route);
-
 
     /**
      * @swagger
@@ -39,7 +37,7 @@ export default (app) => {
 
         let result = '';
 
-        if(password == '1234') {
+        if (password == '1234') {
             result = AuthService.generateToken();
         } else {
             return res.status(400).json({ message: '비밀번호가 틀렸습니다.' });
@@ -47,7 +45,7 @@ export default (app) => {
 
         return res.status(200).json({ token: result });
     });
-  
+
     /**
      * @swagger
      * /sample/testJwt:
@@ -130,7 +128,10 @@ export default (app) => {
         } catch (error) {
             global.Logger.error(`[Joplin Sync] ${error.message}`);
             return res.status(error.status || 500).json({
-                message: error.status === 409 ? error.message : 'Joplin Sync 실패. 서버 로그와 임베딩 API/DB 설정을 확인하세요.'
+                message:
+                    error.status === 409
+                        ? error.message
+                        : 'Joplin Sync 실패. 서버 로그와 임베딩 API/DB 설정을 확인하세요.',
             });
         }
     });

@@ -3,10 +3,10 @@
 이 문서는 `new_portfolio_back`의 챗봇에 사용하는 두 모델 서버를 Linux에서 실행하는 방법입니다.
 명령은 **Linux Bash** 기준이며 Windows CMD의 `^` 대신 줄 끝에 `\`를 사용합니다.
 
-| 컨테이너 | 모델 | 역할 | 호스트 포트 | API |
-| --- | --- | --- | --- | --- |
-| `qwen-api` | Qwen3-0.6B Q4_K_M | 일반 대화·RAG 답변·근거 검사 | 18081 | `/v1/chat/completions` |
-| `e5-embedding` | multilingual-e5-small Q8_0 | 문서·질문 임베딩 | 18082 | `/v1/embeddings` |
+| 컨테이너       | 모델                       | 역할                         | 호스트 포트 | API                    |
+| -------------- | -------------------------- | ---------------------------- | ----------- | ---------------------- |
+| `qwen-api`     | Qwen3-0.6B Q4_K_M          | 일반 대화·RAG 답변·근거 검사 | 18081       | `/v1/chat/completions` |
+| `e5-embedding` | multilingual-e5-small Q8_0 | 문서·질문 임베딩             | 18082       | `/v1/embeddings`       |
 
 두 컨테이너 모두 `ghcr.io/ggml-org/llama.cpp:server` 이미지를 사용합니다.
 모델은 `/home/models`에 저장하고 컨테이너의 `/models`로 읽기 전용 연결합니다.
@@ -314,17 +314,17 @@ docker inspect qwen-api e5-embedding \
 `--restart unless-stopped`는 Docker가 다시 시작될 때 컨테이너도 재시작하도록 합니다.
 직접 `docker stop`한 컨테이너는 `docker start`로 다시 시작하세요.
 
-| 증상 | 확인할 사항 |
-| --- | --- |
-| `failed to open GGUF file` | 호스트 파일 존재 여부, `/home/models` 마운트, `-m /models/...` 경로 |
-| `unknown flag: --api-key` | llama.cpp 옵션은 Docker 이미지 이름 **뒤**에 지정 |
-| `port is already allocated` | 같은 호스트 포트 사용 여부. 기존 임베딩 컨테이너 중지/제거 |
-| `bert model needs to define token type count` | E5의 token_type_count 보완 옵션 |
-| `unordered_map::at` | 현재 E5 파일의 `tokenizer.ggml.model=str:t5` 보완 옵션 |
-| 입력 토큰 초과 HTTP 500/413 | 512토큰 제한, 문서 조각 크기와 백엔드 자동 재분할 처리 |
-| `401 Invalid API Key` | 컨테이너 LLAMA_API_KEY와 백엔드/Postman의 Bearer 키 일치 여부 |
-| 백엔드 `ECONNREFUSED` | 컨테이너가 정상 실행 중인지, 백엔드 위치에 맞는 URL인지 |
-| `OOMKilled=true` | RAM/다른 서비스 메모리 사용량 확인. 모델의 입력 길이·동시 요청 축소 검토 |
+| 증상                                          | 확인할 사항                                                              |
+| --------------------------------------------- | ------------------------------------------------------------------------ |
+| `failed to open GGUF file`                    | 호스트 파일 존재 여부, `/home/models` 마운트, `-m /models/...` 경로      |
+| `unknown flag: --api-key`                     | llama.cpp 옵션은 Docker 이미지 이름 **뒤**에 지정                        |
+| `port is already allocated`                   | 같은 호스트 포트 사용 여부. 기존 임베딩 컨테이너 중지/제거               |
+| `bert model needs to define token type count` | E5의 token_type_count 보완 옵션                                          |
+| `unordered_map::at`                           | 현재 E5 파일의 `tokenizer.ggml.model=str:t5` 보완 옵션                   |
+| 입력 토큰 초과 HTTP 500/413                   | 512토큰 제한, 문서 조각 크기와 백엔드 자동 재분할 처리                   |
+| `401 Invalid API Key`                         | 컨테이너 LLAMA_API_KEY와 백엔드/Postman의 Bearer 키 일치 여부            |
+| 백엔드 `ECONNREFUSED`                         | 컨테이너가 정상 실행 중인지, 백엔드 위치에 맞는 URL인지                  |
+| `OOMKilled=true`                              | RAM/다른 서비스 메모리 사용량 확인. 모델의 입력 길이·동시 요청 축소 검토 |
 
 Docker 실행 옵션을 바꿀 때는 `docker restart`만으로 적용되지 않습니다. 기존 컨테이너를 제거하고 새 옵션으로 생성하세요.
 운영에서 검증을 마친 뒤에는 이미지의 `server` 태그 대신 검증한 이미지 digest를 기록해 고정하면 재현에 도움이 됩니다.

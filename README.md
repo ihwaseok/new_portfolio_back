@@ -21,19 +21,19 @@
 4. Joplin 동기화 시 `JOPLIN_DIR`을 재귀 탐색해 메뉴 ID·부모 ID·파일 경로를 만들고, 기존 Joplin 메뉴 데이터를 삭제한 뒤 새 데이터를 삽입합니다. Markdown 메타데이터와 이미지 리소스 경로도 수정합니다.
 5. 프런트엔드는 이 API에서 메뉴 정보를 받고, 노트 본문은 별도 정적 콘텐츠 서버에서 가져오는 구조입니다.
 
-| 경로 | 역할 |
-| --- | --- |
-| `/status` | 서버 상태 확인 |
-| `<API_PREFIX>/sample/menuList` | 전체 폴더 메뉴 조회 |
-| `<API_PREFIX>/sample/menuByParent/:id` | 선택한 폴더의 노트 조회 |
-| `<API_PREFIX>/sample/joplinSync` | Joplin 파일·DB 동기화 |
-| `<API_PREFIX>/common-codes/:group` | 사용 중인 그룹별 공통코드 조회 (GET) |
-| `<API_PREFIX>/common-codes/:group/:code` | 공통코드 값 수정 (PATCH) |
-| `<API_PREFIX>/chat/search` | 관련 페이지 검색 (POST) |
-| `<API_PREFIX>/chat/messages` | RAG 답변과 관련 페이지 반환 (POST) |
-| `<API_PREFIX>/sample/genJwt` | 샘플 JWT 생성 |
-| `<API_PREFIX>/sample/testJwt` | JWT 검증 테스트 |
-| `/api/docs` | Swagger UI 문서 |
+| 경로                                     | 역할                                 |
+| ---------------------------------------- | ------------------------------------ |
+| `/status`                                | 서버 상태 확인                       |
+| `<API_PREFIX>/sample/menuList`           | 전체 폴더 메뉴 조회                  |
+| `<API_PREFIX>/sample/menuByParent/:id`   | 선택한 폴더의 노트 조회              |
+| `<API_PREFIX>/sample/joplinSync`         | Joplin 파일·DB 동기화                |
+| `<API_PREFIX>/common-codes/:group`       | 사용 중인 그룹별 공통코드 조회 (GET) |
+| `<API_PREFIX>/common-codes/:group/:code` | 공통코드 값 수정 (PATCH)             |
+| `<API_PREFIX>/chat/search`               | 관련 페이지 검색 (POST)              |
+| `<API_PREFIX>/chat/messages`             | RAG 답변과 관련 페이지 반환 (POST)   |
+| `<API_PREFIX>/sample/genJwt`             | 샘플 JWT 생성                        |
+| `<API_PREFIX>/sample/testJwt`            | JWT 검증 테스트                      |
+| `/api/docs`                              | Swagger UI 문서                      |
 
 메뉴 기능은 API 키 검증을 사용하며, JWT 기능은 별도 샘플입니다. 이 서버에는 영상 분석이나 WebRTC 미디어 서버 구현은 포함되어 있지 않습니다. 실행에는 DB 연결 정보, 인증 설정, Joplin 경로 등 환경변수와 데이터베이스 테이블이 필요합니다.
 
@@ -64,9 +64,9 @@ Linux에서 모델 컨테이너를 구성하는 방법은 [Linux Docker AI 서�
 
 ```json
 {
-  "question": "Docker 네트워크 설정은 어디에 있어?",
-  "mode": "auto",
-  "history": []
+    "question": "Docker 네트워크 설정은 어디에 있어?",
+    "mode": "auto",
+    "history": []
 }
 ```
 
@@ -82,11 +82,11 @@ intent는 `general` 또는 `document`입니다. 일반 답변은 mode=`general`,
 
 `evidence.status`는 다음과 같이 구분합니다.
 
-| 값 | 의미 | 동작 |
-| --- | --- | --- |
-| `supported` | 질문의 핵심 주제와 일치하고 모델 검사에서 실제 본문 인용을 확인 | 인용·답변·페이지 제공 |
-| `partial` | 일부 주제만 관련되거나 답변 근거를 확인하지 못함 | 미확인 안내와 참고용 페이지 제공, 답변 생성 생략 |
-| `insufficient` | 검색 후보 없음, 핵심 주제 불일치 또는 구체적 질문 부족 | 자료 부족 안내, 근거 없는 페이지·답변 미제공 |
+| 값             | 의미                                                            | 동작                                             |
+| -------------- | --------------------------------------------------------------- | ------------------------------------------------ |
+| `supported`    | 질문의 핵심 주제와 일치하고 모델 검사에서 실제 본문 인용을 확인 | 인용·답변·페이지 제공                            |
+| `partial`      | 일부 주제만 관련되거나 답변 근거를 확인하지 못함                | 미확인 안내와 참고용 페이지 제공, 답변 생성 생략 |
+| `insufficient` | 검색 후보 없음, 핵심 주제 불일치 또는 구체적 질문 부족          | 자료 부족 안내, 근거 없는 페이지·답변 미제공     |
 
 모든 핵심 키워드가 함께 포함된 후보만 모델 검사를 진행합니다.
 모델이 supported라고 해도 12자 이상의 인용이 원문 본문에 실제 존재하고 핵심 주제를 포함해야 인정합니다.
@@ -191,11 +191,11 @@ Node.js 20 이상이 필요합니다 (`fetch`, `AbortSignal.timeout` 사용).
 
 저장 데이터:
 
-| 테이블 | 내용 |
-| --- | --- |
-| `admin_menu` | 기존 페이지/폴더 메뉴와 상대 경로 |
-| `joplin_document` | 메뉴 ID, 제목, 페이지 경로, Markdown 전문, 메타데이터/주석 제외 본문 |
-| `joplin_document_chunk` | 조각 순서(0부터), 본문 조각, 임베딩 모델, 차원 수, JSON 벡터 |
+| 테이블                  | 내용                                                                 |
+| ----------------------- | -------------------------------------------------------------------- |
+| `admin_menu`            | 기존 페이지/폴더 메뉴와 상대 경로                                    |
+| `joplin_document`       | 메뉴 ID, 제목, 페이지 경로, Markdown 전문, 메타데이터/주석 제외 본문 |
+| `joplin_document_chunk` | 조각 순서(0부터), 본문 조각, 임베딩 모델, 차원 수, JSON 벡터         |
 
 E5용 환경변수 예제는 Unicode 문자 300자, 겹침 50자이며 환경변수로 변경할 수 있습니다 (미설정 시 기존 800/100).
 문자 수는 토큰 수가 아니므로 사용하는 임베딩 모델의 토큰 제한에 맞게 조정하세요.
@@ -220,11 +220,13 @@ MariaDB 10.11에는 네이티브 벡터 인덱스를 전제로 하지 않고 JSO
 로컬 검증: `npm test` (DB 및 외부 임베딩 서버 없이 문서 변환/분할/벡터 검증 단위 테스트).
 
 ## 초기실행 시 의존성 설치
+
 ```sh
 npm install
 ```
 
 ## 개발서버 실행 (터미널은 명령_프롬프트 사용, 파워쉘 X)
+
 ```sh
 npm run dev
 ```
@@ -256,7 +258,9 @@ npm run dev
 ```
 
 ## Swagger 문서 페이지
+
 - 기본적으로 `http://localhost:<SERVER_PORT>/api/docs`
 
 ## 프로젝트 기동순서
+
 - `app.js` → `startup/index.js` → ... → `startup/express.js` → `api/index.js` → ...

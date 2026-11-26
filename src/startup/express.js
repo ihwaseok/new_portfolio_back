@@ -2,9 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import routes from '../api/index.js';
 
-
 export default async (app) => {
-  
     // 서버 Health Check
     app.get('/status', (req, res) => {
         res.status(200).end();
@@ -37,7 +35,7 @@ export default async (app) => {
 
     // 전체 에러 핸들러
     app.use((err, req, res, next) => {
-        switch(err.status) {
+        switch (err.status) {
             case 401:
                 global.Logger.error(err);
                 return res.status(err.status).json({ message: err.message });
@@ -50,6 +48,6 @@ export default async (app) => {
                 break;
         }
 
-        return res.status(err.status || 500).json({ errors: {message: err.message} });
+        return res.status(err.status || 500).json({ errors: { message: err.message } });
     });
 };
